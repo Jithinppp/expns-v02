@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#201F1F" />
     <meta name="robots" content="noindex" />
-    <title>Email verification · Expns</title>
+    <title>Expns</title>
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23CEF62E'/%3E%3Cpath d='M20 33.5l8.5 8.5L45 22' fill='none' stroke='%23171717' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
@@ -172,6 +172,74 @@
         display: none;
       }
 
+      button.btn {
+        border: 0;
+        cursor: pointer;
+      }
+
+      button.btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+        transform: none;
+        filter: none;
+      }
+
+      form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 4px;
+        text-align: left;
+      }
+
+      form[hidden] {
+        display: none;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .field label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .field input {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.22);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+
+      .field input::placeholder {
+        color: var(--dim);
+      }
+
+      .field input:focus {
+        border-color: var(--lime);
+        box-shadow: 0 0 0 3px rgba(206, 246, 46, 0.14);
+      }
+
+      .form-error {
+        font-size: 13px;
+        color: var(--red);
+      }
+
+      .form-error[hidden] {
+        display: none;
+      }
+
       .hint {
         font-size: 13px;
         color: var(--dim);
@@ -197,9 +265,33 @@
       <section class="card" aria-live="polite">
         <div class="badge" id="badge" aria-hidden="true"></div>
         <h1 id="title">Verify your email</h1>
-        <p id="body">
-          This page confirms email links from Expns. Open the confirmation link from your inbox.
-        </p>
+        <p id="body">This page handles email links from Expns. Open the link from your inbox.</p>
+
+        <form id="reset-form" hidden novalidate>
+          <div class="field">
+            <label for="password">New password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              placeholder="At least 6 characters"
+            />
+          </div>
+          <div class="field">
+            <label for="confirm">Confirm password</label>
+            <input
+              id="confirm"
+              name="confirm"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Repeat your new password"
+            />
+          </div>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+          <button class="btn" id="save" type="submit">Save new password</button>
+        </form>
+
         <a class="btn" id="open-app" hidden>Open Expns</a>
         <p class="hint" id="hint" hidden></p>
       </section>
@@ -207,12 +299,20 @@
       <div class="foot">Expns · track smarter</div>
     </main>
 
+    <!-- Pinned to the version the app uses (package.json). -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
     <script>
       (function () {
+        // Project config. The publishable key is safe to expose in a browser —
+        // row-level security governs what it can touch.
+        var SUPABASE_URL = 'https://eigajoroncrqdumxqtbh.supabase.co';
+        var SUPABASE_KEY = 'sb_publishable_95SSYoy0ummfadIHR2XKbg_iMaax6LY';
+
         var ICONS = {
           ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>',
           err: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"/><path d="M12 16.5h.01"/><path d="M10.3 3.9L2.9 17a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
           mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>',
+          lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
         };
 
         var badge = document.getElementById('badge');
@@ -220,14 +320,22 @@
         var body = document.getElementById('body');
         var openApp = document.getElementById('open-app');
         var hint = document.getElementById('hint');
+        var form = document.getElementById('reset-form');
+        var passwordInput = document.getElementById('password');
+        var confirmInput = document.getElementById('confirm');
+        var formError = document.getElementById('form-error');
+        var saveButton = document.getElementById('save');
 
         var params = new URLSearchParams(window.location.search);
         var code = params.get('code');
+        var tokenHash = params.get('token_hash');
         var errorCode = params.get('error_code') || params.get('error');
         var errorDescription = params.get('error_description');
         var isReset = params.get('type') === 'recovery';
         var openAppUrl = params.get('open');
         var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        var client = null;
 
         // Deep link into the app. `open` is embedded by the app at send time —
         // Expo Go needs its exp:// dev-server URL, a build uses expns://.
@@ -237,11 +345,14 @@
 
         function render(className, icon, heading, copy, options) {
           options = options || {};
-          badge.className = 'badge ' + className;
+          badge.className = 'badge' + (className ? ' ' + className : '');
           badge.innerHTML = ICONS[icon];
           title.textContent = heading;
           body.textContent = copy;
           document.title = heading + ' · Expns';
+          form.hidden = true;
+          hint.hidden = true;
+          hint.textContent = '';
           if (options.link) {
             openApp.href = options.link;
             openApp.hidden = false;
@@ -256,12 +367,114 @@
                 }
               }, 2000);
             });
+          } else {
+            openApp.hidden = true;
           }
           if (options.hint) {
             hint.textContent = options.hint;
             hint.hidden = false;
           }
         }
+
+        function showError(heading, copy) {
+          render('err', 'err', heading, copy, {});
+        }
+
+        function setFormError(message) {
+          formError.textContent = message;
+          formError.hidden = !message;
+        }
+
+        function showForm() {
+          badge.className = 'badge';
+          badge.innerHTML = ICONS.lock;
+          title.textContent = 'New password';
+          body.textContent = 'Choose a new password for your Expns account.';
+          document.title = 'New password · Expns';
+          openApp.hidden = true;
+          hint.hidden = true;
+          hint.textContent = '';
+          setFormError('');
+          form.hidden = false;
+          passwordInput.focus();
+        }
+
+        function beginReset() {
+          render('', 'lock', 'Checking your link…', 'This will only take a second.', {});
+
+          if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            showError(
+              'Something went wrong',
+              'Could not reach the password service. Check your connection and reload this page.'
+            );
+            return;
+          }
+
+          // No persistence — the session lives only while this page is open.
+          client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+          });
+
+          client.auth
+            .verifyOtp({ type: 'recovery', token_hash: tokenHash })
+            .then(function (result) {
+              if (result.error) {
+                showError(
+                  'Link expired',
+                  'This reset link has expired or was already used. Request a new one from the app.'
+                );
+                return;
+              }
+              showForm();
+            })
+            .catch(function () {
+              showError('Something went wrong', 'Check your connection and reload this page.');
+            });
+        }
+
+        form.addEventListener('submit', function (event) {
+          event.preventDefault();
+          var password = passwordInput.value;
+          if (password.length < 6) {
+            setFormError('Password must be at least 6 characters.');
+            return;
+          }
+          if (password !== confirmInput.value) {
+            setFormError("Passwords don't match.");
+            return;
+          }
+          if (!client) {
+            setFormError('Something went wrong. Reload this page and try again.');
+            return;
+          }
+          setFormError('');
+          saveButton.disabled = true;
+          saveButton.textContent = 'Saving…';
+          client.auth
+            .updateUser({ password: password })
+            .then(function (result) {
+              if (result.error) {
+                saveButton.disabled = false;
+                saveButton.textContent = 'Save new password';
+                setFormError(result.error.message || "Couldn't save the new password. Try again.");
+                return;
+              }
+              render(
+                'ok',
+                'ok',
+                'Password updated',
+                'Open the Expns app and log in with your new password.',
+                {}
+              );
+              // The browser session isn't needed any more.
+              client.auth.signOut().catch(function () {});
+            })
+            .catch(function () {
+              saveButton.disabled = false;
+              saveButton.textContent = 'Save new password';
+              setFormError('Check your connection and try again.');
+            });
+        });
 
         if (errorCode) {
           var expired = errorCode === 'otp_expired';
@@ -279,18 +492,17 @@
                   : "That link didn't work. Open the app and sign up again."),
             {}
           );
-        } else if (code && isReset) {
+        } else if (isReset && tokenHash) {
+          beginReset();
+        } else if (isReset) {
+          // Recovery links from before the in-browser flow — they carry a
+          // `?code=` that only the app that requested it could exchange.
           render(
-            'ok',
-            'ok',
-            'Reset your password',
-            'Open the Expns app to choose a new password.',
-            isMobile
-              ? {
-                  link: appUrl('auth/reset'),
-                  hint: 'Opens the app so you can set a new password.',
-                }
-              : { hint: 'Open the Expns app on your phone to set a new password.' }
+            'err',
+            'err',
+            'Request a new link',
+            'This reset link was sent by an older version of Expns. Request a new one from the app — it opens the form right here.',
+            {}
           );
         } else if (code) {
           render(
@@ -310,7 +522,7 @@
             'mail',
             'mail',
             'Verify your email',
-            'This page confirms email links from Expns. Open the confirmation link from your inbox.',
+            'This page handles email links from Expns. Open the link from your inbox.',
             {}
           );
         }

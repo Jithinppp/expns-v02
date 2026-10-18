@@ -34,30 +34,28 @@ export const supabase = createClient(
 );
 
 /**
- * Where auth emails send the user after Supabase verifies them.
+ * Where the confirmation email sends the user after Supabase verifies them.
  *
  * Preferred: the hosted verification page — set EXPO_PUBLIC_EMAIL_REDIRECT_URL
- * to its deployed URL (see `verification/`). The page receives the code plus
- * two hints: `?type=recovery` for reset links, and `open=<app url>` in Expo Go
- * (its exp:// URL is the only way back into the app there) so its "Open Expns"
- * button can hand the code along. Fallback without the page: deep link straight
- * into the matching in-app screen (`expns://auth/confirm` / `expns://auth/reset`
- * in a build; the dev-server URL in Expo Go). Whatever value this returns must
- * be allow-listed under Supabase → Authentication → URL Configuration.
+ * to its deployed URL (see `verification/`). The link arrives with `?code=`
+ * plus `open=<app url>` in Expo Go, so the page's "Open Expns" button can hand
+ * the code back to the running app (a real build uses `expns://`). Without the
+ * page, confirmation links deep-link straight to the app's own auth/confirm
+ * screen. Whatever value this returns must be allow-listed under Supabase →
+ * Authentication → URL Configuration.
+ *
+ * Password resets don't pass through here: the reset email template links
+ * straight to the page, where the new password is set in the browser.
  */
-export function emailRedirectTo(kind: 'confirm' | 'reset' = 'confirm'): string {
-  const path = kind === 'reset' ? 'auth/reset' : 'auth/confirm';
+export function emailRedirectTo(): string {
   const isExpoGo = Boolean(Constants.expoGoConfig?.developer);
-  const appLink = isExpoGo ? Linking.createURL(path) : `expns://${path}`;
+  const appLink = isExpoGo ? Linking.createURL('auth/confirm') : 'expns://auth/confirm';
 
   const hosted = process.env.EXPO_PUBLIC_EMAIL_REDIRECT_URL?.trim();
   if (!hosted) return appLink;
 
   const base = hosted.replace(/\/+$/, '');
-  const query: string[] = [];
-  if (kind === 'reset') query.push('type=recovery');
-  if (isExpoGo) query.push(`open=${encodeURIComponent(appLink)}`);
-  return `${base}/${query.length ? `?${query.join('&')}` : ''}`;
+  return isExpoGo ? `${base}/?open=${encodeURIComponent(appLink)}` : `${base}/`;
 }
 
 // Only run the token refresh loop while the app is foregrounded.

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { palette } from '@/constants/theme';
 import { friendlyAuthError } from '@/lib/auth-errors';
-import { emailRedirectTo, supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -46,14 +46,12 @@ export default function LoginScreen() {
     }
     setError(null);
     setInfo(null);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: emailRedirectTo('reset'),
-    });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim());
     if (resetError) {
       setError(friendlyAuthError(resetError.message));
       return;
     }
-    setInfo('Password reset link sent — open it to choose a new password.');
+    setInfo('Password reset link sent — open it in your browser to set a new password.');
   };
 
   return (
