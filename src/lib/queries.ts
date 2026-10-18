@@ -225,6 +225,20 @@ export async function createAccount(input: {
   if (error) throw error;
 }
 
+export async function createCategory(input: {
+  name: string;
+  kind: CategoryKind;
+  icon: string;
+}): Promise<Category> {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ name: input.name.trim(), kind: input.kind, icon: input.icon })
+    .select('id, name, icon, color, kind')
+    .single();
+  if (error) throw error;
+  return data as unknown as Category;
+}
+
 export async function createRecurringRule(input: {
   type: 'income' | 'expense';
   amount: number;

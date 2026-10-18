@@ -48,11 +48,11 @@ export function FloatingTabBar({ state, navigateToTab }: BottomTabBarProps) {
                 }
               }}
               style={styles.item}>
-              <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+              <View style={styles.iconWrap}>
                 <Feather
                   name={icon}
-                  size={20}
-                  color={focused ? palette.ink : 'rgba(255,255,255,0.55)'}
+                  size={22}
+                  color={focused ? palette.lime : 'rgba(255,255,255,0.55)'}
                 />
               </View>
             </Pressable>
@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapActive: { backgroundColor: palette.lime },
   divider: { width: 1, height: 26, backgroundColor: palette.border, marginHorizontal: 6 },
   plus: { backgroundColor: palette.lime, ...shadows.lime },
   pressed: { opacity: 0.85, transform: [{ scale: 0.96 }] },

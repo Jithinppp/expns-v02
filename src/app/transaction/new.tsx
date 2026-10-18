@@ -1,9 +1,16 @@
 import Feather from '@expo/vector-icons/Feather';
-import { format, subDays } from 'date-fns';
+import { format, getDaysInMonth } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Amount } from '@/components/ui/Amount';
@@ -11,11 +18,12 @@ import { AppText } from '@/components/ui/AppText';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Field } from '@/components/ui/Field';
+import { Sheet } from '@/components/ui/Sheet';
 import { fonts, palette, radius } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/errors';
 import { dayLabel, toISODate } from '@/lib/format';
-import { createTransaction, fetchAccounts, fetchCategories } from '@/lib/queries';
+import { createCategory, createTransaction, fetchAccounts, fetchCategories } from '@/lib/queries';
 import type { Account, Category } from '@/lib/types';
 
 const KEYPAD_ROWS = [
@@ -25,7 +33,17 @@ const KEYPAD_ROWS = [
   ['.', '0', 'del'],
 ] as const;
 
-const DATE_OPTIONS = Array.from({ length: 14 }, (_, index) => index);
+/** Sentinel chip id that opens the "new category" sheet. */
+const NEW_TYPE_ID = '__new__';
+
+/** Curated emoji palette for user-created expense/income types. */
+const EMOJI_CHOICES = [
+  '🍔', '🍕', '☕', '🍺', '🛒', '🍎', '🧾', '🚗',
+  '⛽', '🚌', '✈️', '🏠', '💡', '📱', '🌐', '👕',
+  '👟', '💄', '💊', '🏥', '🎬', '🎮', '🎵', '🎁',
+  '📚', '🐶', '🔧', '🏋️', '✂️', '💼', '💰', '💳',
+  '✨', '📦', '🎓', '🧸', '🎯', '🏖️', '🚿', '🧹',
+];
 
 export default function NewTransactionScreen() {
   const params = useLocalSearchParams<{ type?: string }>();
@@ -38,7 +56,7 @@ export default function NewTransactionScreen() {
   );
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
-  const [dateOffset, setDateOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -46,6 +64,13 @@ export default function NewTransactionScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // "New type" sheet (user-created expense/income categories)
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [typeName, setTypeName] = useState('');
+  const [typeEmoji, setTypeEmoji] = useState(EMOJI_CHOICES[0]);
+  const [savingType, setSavingType] = useState(false);
+  const [typeError, setTypeError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -72,7 +97,18 @@ export default function NewTransactionScreen() {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [amountText]);
 
-  const date = useMemo(() => subDays(new Date(), dateOffset), [dateOffset]);
+  const now = new Date();
+  const dayItems = Array.from({ length: getDaysInMonth(now) }, (_, index) => {
+    const day = index + 1;
+    const label =
+      day === now.getDate()
+        ? 'Today'
+        : day === now.getDate() - 1
+          ? 'Yesterday'
+          : format(new Date(now.getFullYear(), now.getMonth(), day), 'EEE d');
+    return { id: String(day), label };
+  });
+  const date = new Date(now.getFullYear(), now.getMonth(), selectedDay);
 
   const onKey = (key: string) => {
     void Haptics.selectionAsync();
@@ -88,6 +124,42 @@ export default function NewTransactionScreen() {
       if (prev === '0') return key;
       return prev + key;
     });
+  };
+
+  const handleCategorySelect = (id: string) => {
+    if (id === NEW_TYPE_ID) {
+      setTypeError(null);
+      setTypeOpen(true);
+      return;
+    }
+    setCategoryId(id);
+  };
+
+  const saveType = async () => {
+    const name = typeName.trim();
+    if (!name) {
+      setTypeError('Give it a name first.');
+      return;
+    }
+    setSavingType(true);
+    setTypeError(null);
+    try {
+      const created = await createCategory({ name, kind: type, icon: typeEmoji });
+      setCategories((prev) => [...prev, created]);
+      setCategoryId(created.id);
+      setTypeOpen(false);
+      setTypeName('');
+      setTypeEmoji(EMOJI_CHOICES[0]);
+    } catch (cause) {
+      const message = errorMessage(cause, 'Could not create the type');
+      setTypeError(
+        message.toLowerCase().includes('duplicate')
+          ? 'You already have a type with this name.'
+          : message,
+      );
+    } finally {
+      setSavingType(false);
+    }
   };
 
   const save = async () => {
@@ -152,13 +224,16 @@ export default function NewTransactionScreen() {
         ) : (
           <>
             <ChipRow
-              items={categories.map((category) => ({
-                id: category.id,
-                label: category.name,
-                emoji: category.icon,
-              }))}
+              items={[
+                ...categories.map((category) => ({
+                  id: category.id,
+                  label: category.name,
+                  emoji: category.icon,
+                })),
+                { id: NEW_TYPE_ID, label: 'New', emoji: '➕' },
+              ]}
               selectedId={categoryId}
-              onSelect={setCategoryId}
+              onSelect={handleCategorySelect}
             />
             <ChipRow
               items={accounts.map((account) => ({ id: account.id, label: account.name }))}
@@ -166,17 +241,10 @@ export default function NewTransactionScreen() {
               onSelect={setAccountId}
             />
             <ChipRow
-              items={DATE_OPTIONS.map((offset) => ({
-                id: String(offset),
-                label:
-                  offset === 0
-                    ? 'Today'
-                    : offset === 1
-                      ? 'Yesterday'
-                      : format(subDays(new Date(), offset), 'EEE d'),
-              }))}
-              selectedId={String(dateOffset)}
-              onSelect={(id) => setDateOffset(Number(id))}
+              items={dayItems}
+              selectedId={String(selectedDay)}
+              onSelect={(id) => setSelectedDay(Number(id))}
+              autoScrollToSelected
             />
             <Field
               label="Note"
@@ -221,6 +289,50 @@ export default function NewTransactionScreen() {
           onPress={() => void save()}
         />
       </View>
+
+      <Sheet
+        visible={typeOpen}
+        onClose={() => setTypeOpen(false)}
+        title={type === 'expense' ? 'New expense type' : 'New income type'}>
+        <View style={styles.field}>
+          <AppText variant="caption" color={palette.textMuted}>
+            Emoji
+          </AppText>
+          <View style={styles.emojiGrid}>
+            {EMOJI_CHOICES.map((emoji) => (
+              <Pressable
+                key={emoji}
+                accessibilityRole="button"
+                accessibilityLabel={`Emoji ${emoji}`}
+                accessibilityState={{ selected: typeEmoji === emoji }}
+                onPress={() => setTypeEmoji(emoji)}
+                style={[styles.emojiCell, typeEmoji === emoji && styles.emojiCellActive]}>
+                <AppText style={styles.emojiText}>{emoji}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <Field
+          label="Name"
+          value={typeName}
+          onChangeText={setTypeName}
+          placeholder={type === 'expense' ? 'Coffee, Rent, Gym…' : 'Freelance, Bonus…'}
+          autoCapitalize="words"
+        />
+
+        <View style={styles.previewRow}>
+          <Chip label={typeName.trim() || 'Preview'} emoji={typeEmoji} active />
+        </View>
+
+        {typeError ? (
+          <AppText variant="caption" color={palette.red}>
+            {typeError}
+          </AppText>
+        ) : null}
+
+        <Button label="Create type" loading={savingType} onPress={() => void saveType()} />
+      </Sheet>
     </SafeAreaView>
   );
 }
@@ -231,25 +343,44 @@ function ChipRow({
   items,
   selectedId,
   onSelect,
+  autoScrollToSelected = false,
 }: {
   items: { id: string; label: string; emoji?: string | null }[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Scrolls the selected chip into view once (used for the month date row). */
+  autoScrollToSelected?: boolean;
 }) {
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const didScroll = useRef(false);
+
   return (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.chipRowContent}>
       {items.map((item) => (
-        <Chip
+        <View
           key={item.id}
-          label={item.label}
-          emoji={item.emoji}
-          active={selectedId === item.id}
-          onPress={() => onSelect(item.id)}
-        />
+          onLayout={
+            autoScrollToSelected && item.id === selectedId
+              ? (event) => {
+                  if (didScroll.current) return;
+                  didScroll.current = true;
+                  const x = event.nativeEvent.layout.x;
+                  scrollRef.current?.scrollTo({ x: Math.max(x - 96, 0), animated: false });
+                }
+              : undefined
+          }>
+          <Chip
+            label={item.label}
+            emoji={item.emoji}
+            active={selectedId === item.id}
+            onPress={() => onSelect(item.id)}
+          />
+        </View>
       ))}
     </ScrollView>
   );
@@ -294,4 +425,19 @@ const styles = StyleSheet.create({
   },
   keyPressed: { opacity: 0.65 },
   keyText: { fontFamily: fonts.semibold, fontSize: 22 },
+  field: { gap: 8 },
+  emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  emojiCell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  emojiCellActive: { backgroundColor: palette.lime, borderColor: palette.lime },
+  emojiText: { fontSize: 20 },
+  previewRow: { flexDirection: 'row' },
 });
