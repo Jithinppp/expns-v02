@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#201F1F" />
+    <meta name="robots" content="noindex" />
+    <title>Email verification · Expns</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23CEF62E'/%3E%3Cpath d='M20 33.5l8.5 8.5L45 22' fill='none' stroke='%23171717' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #201f1f;
+        --deep: #171616;
+        --surface: #2a2929;
+        --lime: #cef62e;
+        --green: #30e48d;
+        --red: #ff7a6b;
+        --ink: #171717;
+        --text: #ffffff;
+        --muted: rgba(255, 255, 255, 0.62);
+        --dim: rgba(255, 255, 255, 0.4);
+        --border: rgba(255, 255, 255, 0.08);
+        --lime-soft: rgba(206, 246, 46, 0.14);
+        --red-soft: rgba(255, 122, 107, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background-color: var(--bg);
+        background-image: radial-gradient(
+          120% 90% at 50% -10%,
+          rgba(206, 246, 46, 0.07),
+          transparent 60%
+        );
+        color: var(--text);
+        font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      .shell {
+        width: 100%;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .wordmark {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .wordmark em {
+        font-style: normal;
+        color: var(--lime);
+      }
+
+      .card {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 32px 28px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .badge {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--lime-soft);
+        color: var(--lime);
+      }
+
+      .badge svg {
+        width: 30px;
+        height: 30px;
+      }
+
+      .badge.ok {
+        background: var(--lime);
+        color: var(--ink);
+        box-shadow: 0 8px 28px rgba(206, 246, 46, 0.25);
+      }
+
+      .badge.err {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+
+      p {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 8px;
+        padding: 16px 24px;
+        border-radius: 999px;
+        background: var(--lime);
+        color: var(--ink);
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 10px 30px rgba(206, 246, 46, 0.18);
+        transition: transform 120ms ease, filter 120ms ease;
+      }
+
+      .btn:hover {
+        filter: brightness(1.06);
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--lime);
+        outline-offset: 3px;
+      }
+
+      .btn[hidden] {
+        display: none;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--dim);
+      }
+
+      .hint[hidden] {
+        display: none;
+      }
+
+      .foot {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="wordmark">Expns<em>.</em></div>
+
+      <section class="card" aria-live="polite">
+        <div class="badge" id="badge" aria-hidden="true"></div>
+        <h1 id="title">Verify your email</h1>
+        <p id="body">
+          This page confirms email links from Expns. Open the confirmation link from your inbox.
+        </p>
+        <a class="btn" id="open-app" hidden>Open Expns</a>
+        <p class="hint" id="hint" hidden></p>
+      </section>
+
+      <div class="foot">Expns · track smarter</div>
+    </main>
+
+    <script>
+      (function () {
+        var ICONS = {
+          ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>',
+          err: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"/><path d="M12 16.5h.01"/><path d="M10.3 3.9L2.9 17a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+          mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>',
+        };
+
+        var badge = document.getElementById('badge');
+        var title = document.getElementById('title');
+        var body = document.getElementById('body');
+        var openApp = document.getElementById('open-app');
+        var hint = document.getElementById('hint');
+
+        var params = new URLSearchParams(window.location.search);
+        var code = params.get('code');
+        var errorCode = params.get('error_code') || params.get('error');
+        var errorDescription = params.get('error_description');
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        function render(className, icon, heading, copy, options) {
+          options = options || {};
+          badge.className = 'badge ' + className;
+          badge.innerHTML = ICONS[icon];
+          title.textContent = heading;
+          body.textContent = copy;
+          document.title = heading + ' · Expns';
+          if (options.link) {
+            openApp.href = options.link;
+            openApp.hidden = false;
+          }
+          if (options.hint) {
+            hint.textContent = options.hint;
+            hint.hidden = false;
+          }
+        }
+
+        if (errorCode) {
+          var expired = errorCode === 'otp_expired';
+          render(
+            'err',
+            'err',
+            expired ? 'Link expired' : 'Something went wrong',
+            expired
+              ? 'This confirmation link has expired or was already used. Open the app and sign up again to get a fresh one.'
+              : errorDescription || "That link didn't work. Open the app and sign up again.",
+            {}
+          );
+        } else if (code) {
+          render(
+            'ok',
+            'ok',
+            'Email verified',
+            'Your Expns account is ready to go.',
+            isMobile
+              ? {
+                  link: 'expns://auth/confirm?code=' + encodeURIComponent(code),
+                  hint: 'Opens the app and signs you in.',
+                }
+              : { hint: 'Open the Expns app on your phone and log in to get started.' }
+          );
+        } else {
+          render(
+            'mail',
+            'mail',
+            'Verify your email',
+            'This page confirms email links from Expns. Open the confirmation link from your inbox.',
+            {}
+          );
+        }
+      })();
+    </script>
+  </body>
+</html>

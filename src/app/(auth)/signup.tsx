@@ -14,7 +14,7 @@ import { Field } from '@/components/ui/Field';
 import { palette } from '@/constants/theme';
 import { friendlyAuthError } from '@/lib/auth-errors';
 import { CURRENCIES } from '@/lib/format';
-import { supabase } from '@/lib/supabase';
+import { emailRedirectTo, supabase } from '@/lib/supabase';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
@@ -45,7 +45,10 @@ export default function SignupScreen() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim(), currency } },
+      options: {
+        data: { full_name: fullName.trim(), currency },
+        emailRedirectTo: emailRedirectTo(),
+      },
     });
     setBusy(false);
     if (signUpError) {
@@ -65,6 +68,7 @@ export default function SignupScreen() {
     const { error: resendError } = await supabase.auth.resend({
       type: 'signup',
       email: awaitingEmail,
+      options: { emailRedirectTo: emailRedirectTo() },
     });
     if (resendError) {
       setError(friendlyAuthError(resendError.message));
@@ -90,7 +94,8 @@ export default function SignupScreen() {
             Check your inbox
           </AppText>
           <AppText variant="caption" color={palette.inkMuted}>
-            We sent a confirmation link to {awaitingEmail}. Confirm it, then log in.
+            We sent a confirmation link to {awaitingEmail}. Open it to verify your account, then
+            log in here.
           </AppText>
         </Card>
         {error ? <Banner text={error} /> : null}

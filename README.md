@@ -24,8 +24,10 @@ npm install
    - `supabase/migrations/20261018000002_ledger.sql` — recurring rules + transactions
    - `supabase/migrations/20261018000003_budgets_alerts.sql` — budgets, periods, alert triggers, notifications
    - `supabase/migrations/20261018000004_views_automation.sql` — views, RPCs, recurring cron, realtime
-3. **Auth → Providers → Email**: for faster testing turn **off** "Confirm email". If you leave it on, the app shows a "check your inbox" screen after signup — both paths work.
-4. **Optional, for automatic recurring posts**: Database → **Extensions** → enable `pg_cron`, then re-run just the scheduling block at the end of `0004_views_automation.sql` (or run `select cron.schedule('expns-post-recurring', '0 1 * * *', 'select public.post_due_recurring()');`).
+   - `supabase/migrations/20261018000005_month_carryover.sql` — month summary gains the carry-over balance
+3. **Email verification page (recommended)**: deploy the static page in `verification/` — on Vercel: **Add New → Project**, import this repo, set **Root Directory** to `verification`, Deploy. Then wire it up: add the deployed URL (e.g. `https://expns-verify.vercel.app/**`) under **Auth → URL Configuration → Redirect URLs**, and set `EXPO_PUBLIC_EMAIL_REDIRECT_URL` in `.env.local`. Confirmation links then land on a branded "Email verified" page — on a phone its **Open Expns** button hands the verified session back to the app. Prefer the in-app screen only? Skip this step and add `expns://**` (plus `exp://**` while testing in Expo Go) to Redirect URLs instead. The **Site URL** can be anything — it's only the fallback.
+4. **Auth → Providers → Email**: confirm email can stay **on** — clicking the link verifies the account (hosted page, or the app's own screen when no page is configured). Turning it **off** skips the email step entirely (faster local testing). Both paths work.
+5. **Optional, for automatic recurring posts**: Database → **Extensions** → enable `pg_cron`, then re-run just the scheduling block at the end of `0004_views_automation.sql` (or run `select cron.schedule('expns-post-recurring', '0 1 * * *', 'select public.post_due_recurring()');`).
 
 ## 3. Environment
 
@@ -34,9 +36,10 @@ Copy `.env.example` to `.env.local` and fill in:
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # or the legacy anon key
+EXPO_PUBLIC_EMAIL_REDIRECT_URL=https://expns-verify.vercel.app   # optional — verification page from step 3
 ```
 
-Both come from **Project Settings → API**. Only the publishable/anon key belongs in a mobile app — `service_role` bypasses RLS and must never ship.
+Both Supabase values come from **Project Settings → API**. Only the publishable/anon key belongs in a mobile app — `service_role` bypasses RLS and must never ship. `EXPO_PUBLIC_EMAIL_REDIRECT_URL` is optional: set it to the deployed verification page, or leave it empty to deep-link confirmation emails into the app.
 
 ## 4. Run
 
@@ -53,6 +56,7 @@ npx expo start
 | Area | Status |
 | --- | --- |
 | Onboarding (3 slides, composed design visuals) → sign up / log in → dashboard | ✅ |
+| Email confirmation: Supabase verifies the link, then the hosted page (`verification/`, deploy on Vercel) shows "Email verified" — on a phone it hands back to the app and signs you in | ✅ |
 | Dashboard: month switcher, balance card (available = carried + monthly per month), income/expense bars, quick-add tiles, budgets with striped progress, spending donut, recent history | ✅ |
 | Add expense / income: big inline amount field with the system keyboard, category & account chips, month-switchable date picker (backfill any past month), note | ✅ |
 | Custom expense / income types: create your own with an emoji picker right from the add screen | ✅ |
