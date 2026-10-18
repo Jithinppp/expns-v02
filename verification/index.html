@@ -226,7 +226,14 @@
         var errorCode = params.get('error_code') || params.get('error');
         var errorDescription = params.get('error_description');
         var isReset = params.get('type') === 'recovery';
+        var openAppUrl = params.get('open');
         var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        // Deep link into the app. `open` is embedded by the app at send time —
+        // Expo Go needs its exp:// dev-server URL, a build uses expns://.
+        function appUrl(path) {
+          return (openAppUrl || 'expns://' + path) + '?code=' + encodeURIComponent(code);
+        }
 
         function render(className, icon, heading, copy, options) {
           options = options || {};
@@ -238,6 +245,17 @@
           if (options.link) {
             openApp.href = options.link;
             openApp.hidden = false;
+            openApp.addEventListener('click', function () {
+              // If the app didn't take over after the tap, the browser blocked
+              // the link (in-app browsers do this) — show the workaround.
+              window.setTimeout(function () {
+                if (!document.hidden) {
+                  hint.textContent =
+                    'Nothing happened? Open this page in Safari or Chrome (menu ⋮ → Open in Browser) and tap again.';
+                  hint.hidden = false;
+                }
+              }, 2000);
+            });
           }
           if (options.hint) {
             hint.textContent = options.hint;
@@ -269,7 +287,7 @@
             'Open the Expns app to choose a new password.',
             isMobile
               ? {
-                  link: 'expns://auth/reset?code=' + encodeURIComponent(code),
+                  link: appUrl('auth/reset'),
                   hint: 'Opens the app so you can set a new password.',
                 }
               : { hint: 'Open the Expns app on your phone to set a new password.' }
@@ -282,7 +300,7 @@
             'Your Expns account is ready to go.',
             isMobile
               ? {
-                  link: 'expns://auth/confirm?code=' + encodeURIComponent(code),
+                  link: appUrl('auth/confirm'),
                   hint: 'Opens the app and signs you in.',
                 }
               : { hint: 'Open the Expns app on your phone and log in to get started.' }

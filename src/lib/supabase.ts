@@ -37,24 +37,27 @@ export const supabase = createClient(
  * Where auth emails send the user after Supabase verifies them.
  *
  * Preferred: the hosted verification page — set EXPO_PUBLIC_EMAIL_REDIRECT_URL
- * to its deployed URL (see `verification/`). Reset links add `?type=recovery`
- * (path kept so the `/**` redirect allowlist matches) so the page can show
- * the right copy. Fallback: deep link straight into the matching in-app screen
- * (`expns://auth/confirm` / `expns://auth/reset` in a build; the dev-server
- * URL in Expo Go). Whatever value this returns must be allow-listed under
- * Supabase → Authentication → URL Configuration → Redirect URLs.
+ * to its deployed URL (see `verification/`). The page receives the code plus
+ * two hints: `?type=recovery` for reset links, and `open=<app url>` in Expo Go
+ * (its exp:// URL is the only way back into the app there) so its "Open Expns"
+ * button can hand the code along. Fallback without the page: deep link straight
+ * into the matching in-app screen (`expns://auth/confirm` / `expns://auth/reset`
+ * in a build; the dev-server URL in Expo Go). Whatever value this returns must
+ * be allow-listed under Supabase → Authentication → URL Configuration.
  */
 export function emailRedirectTo(kind: 'confirm' | 'reset' = 'confirm'): string {
   const path = kind === 'reset' ? 'auth/reset' : 'auth/confirm';
+  const isExpoGo = Boolean(Constants.expoGoConfig?.developer);
+  const appLink = isExpoGo ? Linking.createURL(path) : `expns://${path}`;
+
   const hosted = process.env.EXPO_PUBLIC_EMAIL_REDIRECT_URL?.trim();
-  if (hosted) {
-    const base = hosted.replace(/\/+$/, '');
-    return kind === 'reset' ? `${base}/?type=recovery` : base;
-  }
-  if (Constants.expoGoConfig?.developer) {
-    return Linking.createURL(path);
-  }
-  return `expns://${path}`;
+  if (!hosted) return appLink;
+
+  const base = hosted.replace(/\/+$/, '');
+  const query: string[] = [];
+  if (kind === 'reset') query.push('type=recovery');
+  if (isExpoGo) query.push(`open=${encodeURIComponent(appLink)}`);
+  return `${base}/${query.length ? `?${query.join('&')}` : ''}`;
 }
 
 // Only run the token refresh loop while the app is foregrounded.
