@@ -4,7 +4,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   SectionList,
@@ -16,13 +15,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { TransactionRow } from '@/components/TransactionRow';
+import { TransactionSheet } from '@/components/TransactionSheet';
 import { AppText } from '@/components/ui/AppText';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { fonts, palette, radius, TAB_BAR_INSET } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { errorMessage } from '@/lib/errors';
 import { dayLabel, formatMoney, monthStart } from '@/lib/format';
-import { fetchTransactionsBetween, softDeleteTransaction } from '@/lib/queries';
+import { fetchTransactionsBetween } from '@/lib/queries';
 import type { TransactionRow as TransactionRowType } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
 
@@ -32,6 +31,7 @@ export default function TransactionsScreen() {
   const currency = profile?.base_currency ?? 'USD';
   const [month, setMonth] = useState(() => new Date());
   const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<TransactionRowType | null>(null);
 
   const monthId = `${month.getFullYear()}-${month.getMonth()}`;
   const state = useLoad(
@@ -81,26 +81,6 @@ export default function TransactionsScreen() {
     return { income, expense };
   }, [transactions]);
 
-  const confirmDelete = (tx: TransactionRowType) => {
-    Alert.alert('Delete transaction?', 'This removes it from your history and budgets.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            try {
-              await softDeleteTransaction(tx.id);
-              await reload();
-            } catch (cause) {
-              Alert.alert('Could not delete', errorMessage(cause, 'Try again.'));
-            }
-          })();
-        },
-      },
-    ]);
-  };
-
   return (
     <SafeAreaView edges={['top']} style={styles.root}>
       <SectionList
@@ -111,7 +91,8 @@ export default function TransactionsScreen() {
             tx={item}
             currency={currency}
             showDate={false}
-            onLongPress={() => confirmDelete(item)}
+            onPress={() => setSelected(item)}
+            onLongPress={() => setSelected(item)}
           />
         )}
         renderSectionHeader={({ section }) => (
@@ -201,6 +182,12 @@ export default function TransactionsScreen() {
             progressBackgroundColor={palette.surface}
           />
         }
+      />
+      <TransactionSheet
+        tx={selected}
+        currency={currency}
+        onClose={() => setSelected(null)}
+        onDeleted={reload}
       />
     </SafeAreaView>
   );

@@ -1,13 +1,14 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BudgetCard } from '@/components/BudgetCard';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { TransactionRow } from '@/components/TransactionRow';
+import { TransactionSheet } from '@/components/TransactionSheet';
 import { Amount } from '@/components/ui/Amount';
 import { AppText } from '@/components/ui/AppText';
 import { Avatar } from '@/components/ui/Avatar';
@@ -18,7 +19,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { chartPalette, palette, radius } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { errorMessage } from '@/lib/errors';
 import { addMonthsToDate, firstName, formatMoney, monthLabel } from '@/lib/format';
 import {
   fetchAccountBalances,
@@ -27,7 +27,6 @@ import {
   fetchMonthSummary,
   fetchRecentTransactions,
   fetchUnreadNotificationCount,
-  softDeleteTransaction,
 } from '@/lib/queries';
 import type {
   AccountBalance,
@@ -52,6 +51,7 @@ export default function DashboardScreen() {
   const { profile } = useAuth();
   const currency = profile?.base_currency ?? 'USD';
   const [month, setMonth] = useState(() => new Date());
+  const [selected, setSelected] = useState<TransactionRowType | null>(null);
 
   const monthId = `${month.getFullYear()}-${month.getMonth()}`;
   const state = useLoad<DashboardData>(async () => {
@@ -85,26 +85,6 @@ export default function DashboardScreen() {
         : null;
     return { balance, budgetTotal, delta };
   }, [data]);
-
-  const confirmDelete = (tx: TransactionRowType) => {
-    Alert.alert('Delete transaction?', 'This removes it from your history and budgets.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            try {
-              await softDeleteTransaction(tx.id);
-              await reload();
-            } catch (cause) {
-              Alert.alert('Could not delete', errorMessage(cause, 'Try again.'));
-            }
-          })();
-        },
-      },
-    ]);
-  };
 
   if (loading && !data) {
     return (
@@ -312,11 +292,19 @@ export default function DashboardScreen() {
               key={tx.id}
               tx={tx}
               currency={currency}
-              onLongPress={() => confirmDelete(tx)}
+              onPress={() => setSelected(tx)}
+              onLongPress={() => setSelected(tx)}
             />
           ))
         )}
       </View>
+
+      <TransactionSheet
+        tx={selected}
+        currency={currency}
+        onClose={() => setSelected(null)}
+        onDeleted={reload}
+      />
     </Screen>
   );
 }

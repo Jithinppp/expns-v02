@@ -54,8 +54,9 @@ npx expo start
 | --- | --- |
 | Onboarding (3 slides, composed design visuals) → sign up / log in → dashboard | ✅ |
 | Dashboard: month switcher, white balance card, income/expense bars, quick-add tiles, budgets with striped progress, spending donut, recent history | ✅ |
-| Add expense / income: custom keypad, category & account chips, 14-day date picker, note | ✅ |
-| Transactions tab: month summary, search, day-grouped list, pull-to-refresh, long-press soft delete | ✅ |
+| Add expense / income: custom keypad, category & account chips, full-month date picker, note | ✅ |
+| Custom expense / income types: create your own with an emoji picker right from the add screen | ✅ |
+| Transactions tab: month summary, search, day-grouped list, pull-to-refresh, tap or long-press a row to view & delete (soft delete, budgets adjust instantly) | ✅ |
 | Budgets tab: per-category limits, weekly/monthly/yearly, alert threshold, live spent, long-press delete | ✅ |
 | Recurring rules: created in Profile, auto-posted by `pg_cron` (daily 01:00 UTC), anchored to `start_on` to avoid month-end drift | ✅ (needs pg_cron enabled) |
 | Alert inbox (bell) + `notifications` table with realtime | ✅ |
