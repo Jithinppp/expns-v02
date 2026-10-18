@@ -1,4 +1,3 @@
-import Feather from '@expo/vector-icons/Feather';
 import { format, getDaysInMonth } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
@@ -8,30 +7,24 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
   type ScrollViewInstance,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Amount } from '@/components/ui/Amount';
 import { AppText } from '@/components/ui/AppText';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Field } from '@/components/ui/Field';
 import { Sheet } from '@/components/ui/Sheet';
-import { fonts, palette, radius } from '@/constants/theme';
+import { MonthSwitcher } from '@/components/MonthSwitcher';
+import { fonts, palette } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/errors';
-import { dayLabel, toISODate } from '@/lib/format';
+import { currencySymbol, dayLabel, isSameMonth, toISODate } from '@/lib/format';
 import { createCategory, createTransaction, fetchAccounts, fetchCategories } from '@/lib/queries';
 import type { Account, Category } from '@/lib/types';
-
-const KEYPAD_ROWS = [
-  ['1', '2', '3'],
-  ['4', '5', '6'],
-  ['7', '8', '9'],
-  ['.', '0', 'del'],
-] as const;
 
 /** Sentinel chip id that opens the "new category" sheet. */
 const NEW_TYPE_ID = '__new__';
@@ -56,6 +49,7 @@ export default function NewTransactionScreen() {
   );
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
+  const [month, setMonth] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -97,33 +91,37 @@ export default function NewTransactionScreen() {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [amountText]);
 
-  const now = new Date();
-  const dayItems = Array.from({ length: getDaysInMonth(now) }, (_, index) => {
+  const today = new Date();
+  const monthId = `${month.getFullYear()}-${month.getMonth()}`;
+  const daysInMonth = getDaysInMonth(month);
+  const isCurrentMonth = isSameMonth(month, today);
+  const dayItems = Array.from({ length: daysInMonth }, (_, index) => {
     const day = index + 1;
     const label =
-      day === now.getDate()
+      isCurrentMonth && day === today.getDate()
         ? 'Today'
-        : day === now.getDate() - 1
+        : isCurrentMonth && day === today.getDate() - 1
           ? 'Yesterday'
-          : format(new Date(now.getFullYear(), now.getMonth(), day), 'EEE d');
+          : format(new Date(month.getFullYear(), month.getMonth(), day), 'EEE d');
     return { id: String(day), label };
   });
-  const date = new Date(now.getFullYear(), now.getMonth(), selectedDay);
+  const date = new Date(month.getFullYear(), month.getMonth(), Math.min(selectedDay, daysInMonth));
 
-  const onKey = (key: string) => {
-    void Haptics.selectionAsync();
-    setAmountText((prev) => {
-      if (key === 'del') return prev.slice(0, -1);
-      if (key === '.') {
-        if (prev.includes('.')) return prev;
-        return prev === '' ? '0.' : `${prev}.`;
-      }
-      const [whole, decimals] = prev.split('.');
-      if (prev.includes('.') && decimals && decimals.length >= 2) return prev;
-      if (!prev.includes('.') && whole.length >= 8) return prev;
-      if (prev === '0') return key;
-      return prev + key;
-    });
+  const changeMonth = (next: Date) => {
+    setSelectedDay((prev) =>
+      isSameMonth(next, new Date()) ? new Date().getDate() : Math.min(prev, getDaysInMonth(next)),
+    );
+    setMonth(next);
+  };
+
+  const onAmountChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    const [whole, ...decimals] = cleaned.split('.');
+    const next =
+      decimals.length > 0
+        ? `${whole.slice(0, 8)}.${decimals.join('').slice(0, 2)}`
+        : whole.slice(0, 8);
+    setAmountText(next.startsWith('.') ? `0${next}` : next);
   };
 
   const handleCategorySelect = (id: string) => {
@@ -206,17 +204,28 @@ export default function NewTransactionScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}>
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <View style={styles.amountBlock}>
           <AppText variant="caption" color={palette.textDim}>
             {`${dayLabel(toISODate(date))} · ${type === 'expense' ? 'Expense' : 'Income'}`}
           </AppText>
-          <Amount
-            value={amount}
-            currency={currency}
-            size={54}
-            color={amount > 0 ? palette.white : palette.textDim}
-          />
+          <View style={styles.amountEntry}>
+            <AppText style={styles.amountCurrency}>{currencySymbol(currency)}</AppText>
+            <TextInput
+              value={amountText}
+              onChangeText={onAmountChange}
+              style={[styles.amountInput, !amountText && styles.amountInputEmpty]}
+              placeholder="0"
+              placeholderTextColor={palette.textDim}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              autoFocus
+              selectionColor={palette.lime}
+              accessibilityLabel="Amount"
+            />
+          </View>
         </View>
 
         {loadingOptions ? (
@@ -240,12 +249,16 @@ export default function NewTransactionScreen() {
               selectedId={accountId}
               onSelect={setAccountId}
             />
-            <ChipRow
-              items={dayItems}
-              selectedId={String(selectedDay)}
-              onSelect={(id) => setSelectedDay(Number(id))}
-              autoScrollToSelected
-            />
+            <View style={styles.dateBlock}>
+              <MonthSwitcher month={month} onChange={changeMonth} style={styles.monthRow} />
+              <ChipRow
+                key={monthId}
+                items={dayItems}
+                selectedId={String(selectedDay)}
+                onSelect={(id) => setSelectedDay(Number(id))}
+                autoScrollToSelected
+              />
+            </View>
             <Field
               label="Note"
               value={note}
@@ -262,33 +275,13 @@ export default function NewTransactionScreen() {
             {error}
           </AppText>
         ) : null}
-      </ScrollView>
 
-      <View style={[styles.keypad, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-        {KEYPAD_ROWS.map((row) => (
-          <View key={row.join('-')} style={styles.keyRow}>
-            {row.map((key) => (
-              <Pressable
-                key={key}
-                accessibilityRole="button"
-                accessibilityLabel={key === 'del' ? 'Delete digit' : key}
-                onPress={() => onKey(key)}
-                style={({ pressed }) => [styles.key, pressed && styles.keyPressed]}>
-                {key === 'del' ? (
-                  <Feather name="delete" size={22} color={palette.white} />
-                ) : (
-                  <AppText style={styles.keyText}>{key}</AppText>
-                )}
-              </Pressable>
-            ))}
-          </View>
-        ))}
         <Button
           label={type === 'expense' ? 'Save expense' : 'Save income'}
           loading={busy}
           onPress={() => void save()}
         />
-      </View>
+      </ScrollView>
 
       <Sheet
         visible={typeOpen}
@@ -402,29 +395,30 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 44 },
   content: { padding: 20, gap: 18, paddingBottom: 16 },
   amountBlock: { alignItems: 'center', gap: 8, paddingVertical: 12 },
+  amountEntry: { flexDirection: 'row', alignItems: 'flex-end' },
+  amountCurrency: {
+    fontFamily: fonts.semibold,
+    fontSize: 23,
+    color: palette.white,
+    marginRight: 3,
+    marginBottom: 6,
+    opacity: 0.7,
+  },
+  amountInput: {
+    fontFamily: fonts.bold,
+    fontSize: 54,
+    lineHeight: 60,
+    letterSpacing: -1.4,
+    color: palette.white,
+    padding: 0,
+    includeFontPadding: false,
+    textAlign: 'center',
+    minWidth: 80,
+  },
+  amountInputEmpty: { color: palette.textDim },
+  dateBlock: { gap: 10 },
+  monthRow: { alignSelf: 'center' },
   chipRowContent: { gap: 8, paddingRight: 20 },
-  keypad: {
-    backgroundColor: palette.deep,
-    borderTopWidth: 1,
-    borderColor: palette.border,
-    borderTopLeftRadius: radius.card,
-    borderTopRightRadius: radius.card,
-    padding: 16,
-    gap: 10,
-  },
-  keyRow: { flexDirection: 'row', gap: 10 },
-  key: {
-    flex: 1,
-    height: 54,
-    borderRadius: radius.md + 2,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyPressed: { opacity: 0.65 },
-  keyText: { fontFamily: fonts.semibold, fontSize: 22 },
   field: { gap: 8 },
   emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   emojiCell: {

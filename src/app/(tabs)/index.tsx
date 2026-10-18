@@ -21,7 +21,6 @@ import { chartPalette, palette, radius } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { addMonthsToDate, firstName, formatMoney, monthLabel } from '@/lib/format';
 import {
-  fetchAccountBalances,
   fetchBudgetStatus,
   fetchExpenseByCategory,
   fetchMonthSummary,
@@ -29,7 +28,6 @@ import {
   fetchUnreadNotificationCount,
 } from '@/lib/queries';
 import type {
-  AccountBalance,
   BudgetStatus,
   CategorySpend,
   MonthSummary,
@@ -42,7 +40,6 @@ interface DashboardData {
   previous: MonthSummary;
   budgets: BudgetStatus[];
   recent: TransactionRowType[];
-  balances: AccountBalance[];
   byCategory: CategorySpend[];
   unread: number;
 }
@@ -55,16 +52,15 @@ export default function DashboardScreen() {
 
   const monthId = `${month.getFullYear()}-${month.getMonth()}`;
   const state = useLoad<DashboardData>(async () => {
-    const [summary, previous, budgets, recent, balances, byCategory, unread] = await Promise.all([
+    const [summary, previous, budgets, recent, byCategory, unread] = await Promise.all([
       fetchMonthSummary(month),
       fetchMonthSummary(addMonthsToDate(month, -1)),
       fetchBudgetStatus(),
       fetchRecentTransactions(6),
-      fetchAccountBalances(),
       fetchExpenseByCategory(month),
       fetchUnreadNotificationCount(),
     ]);
-    return { summary, previous, budgets, recent, balances, byCategory, unread };
+    return { summary, previous, budgets, recent, byCategory, unread };
   }, monthId);
 
   const { data, loading, error, refreshing, reload, refresh } = state;
@@ -77,13 +73,12 @@ export default function DashboardScreen() {
 
   const totals = useMemo(() => {
     if (!data) return null;
-    const balance = data.balances.reduce((sum, account) => sum + account.balance, 0);
     const budgetTotal = data.budgets.reduce((sum, budget) => sum + budget.amount_limit, 0);
     const delta =
       data.previous.expense > 0 && data.summary.expense > 0
         ? Math.round(((data.summary.expense - data.previous.expense) / data.previous.expense) * 100)
         : null;
-    return { balance, budgetTotal, delta };
+    return { budgetTotal, delta };
   }, [data]);
 
   if (loading && !data) {
@@ -112,6 +107,8 @@ export default function DashboardScreen() {
 
   const name = firstName(profile?.full_name);
   const maxFlow = Math.max(data.summary.income, data.summary.expense, 1);
+  const monthly = data.summary.income - data.summary.expense;
+  const available = data.summary.carryover + monthly;
   const donutSegments = data.byCategory.slice(0, 5).map((row, index) => ({
     value: row.total,
     color: row.color ?? chartPalette[index % chartPalette.length],
@@ -147,9 +144,28 @@ export default function DashboardScreen() {
       <Card variant="white" style={styles.balanceCard}>
         <View style={styles.balanceTop}>
           <AppText variant="caption" color={palette.inkMuted}>
-            Left balance
+            {`Available · ${monthLabel(month)}`}
           </AppText>
-          <Amount value={totals.balance} currency={currency} size={44} color={palette.ink} />
+          <Amount value={available} currency={currency} size={44} color={palette.ink} />
+        </View>
+
+        <View style={styles.splitBlock}>
+          <View style={styles.splitRow}>
+            <AppText variant="label" color={palette.inkMuted}>
+              Monthly
+            </AppText>
+            <AppText variant="label" color={palette.ink}>
+              {`${monthly < 0 ? '-' : '+'}${formatMoney(Math.abs(monthly), currency)}`}
+            </AppText>
+          </View>
+          <View style={styles.splitRow}>
+            <AppText variant="caption" color={palette.inkDim}>
+              Carried
+            </AppText>
+            <AppText variant="caption" color={palette.inkDim}>
+              {formatMoney(data.summary.carryover, currency)}
+            </AppText>
+          </View>
         </View>
 
         <View style={styles.balanceBars}>
@@ -383,6 +399,8 @@ const styles = StyleSheet.create({
   monthSwitcher: { alignSelf: 'flex-start' },
   balanceCard: { gap: 18 },
   balanceTop: { gap: 6 },
+  splitBlock: { gap: 6 },
+  splitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceBars: { gap: 14 },
   miniBar: { gap: 7 },
   miniBarRow: { flexDirection: 'row', justifyContent: 'space-between' },

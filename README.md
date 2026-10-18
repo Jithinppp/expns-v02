@@ -53,8 +53,8 @@ npx expo start
 | Area | Status |
 | --- | --- |
 | Onboarding (3 slides, composed design visuals) → sign up / log in → dashboard | ✅ |
-| Dashboard: month switcher, white balance card, income/expense bars, quick-add tiles, budgets with striped progress, spending donut, recent history | ✅ |
-| Add expense / income: custom keypad, category & account chips, full-month date picker, note | ✅ |
+| Dashboard: month switcher, balance card (available = carried + monthly per month), income/expense bars, quick-add tiles, budgets with striped progress, spending donut, recent history | ✅ |
+| Add expense / income: big inline amount field with the system keyboard, category & account chips, month-switchable date picker (backfill any past month), note | ✅ |
 | Custom expense / income types: create your own with an emoji picker right from the add screen | ✅ |
 | Transactions tab: month summary, search, day-grouped list, pull-to-refresh, tap or long-press a row to view & delete (soft delete, budgets adjust instantly) | ✅ |
 | Budgets tab: per-category limits, weekly/monthly/yearly, alert threshold, live spent, long-press delete | ✅ |

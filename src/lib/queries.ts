@@ -37,8 +37,12 @@ export async function fetchMonthSummary(month: Date): Promise<MonthSummary> {
     p_month: toISODate(month),
   });
   if (error) throw error;
-  const row = (data as { income: unknown; expense: unknown }[] | null)?.[0];
-  return { income: num(row?.income), expense: num(row?.expense) };
+  const row = (data as { income: unknown; expense: unknown; carryover: unknown }[] | null)?.[0];
+  return {
+    income: num(row?.income),
+    expense: num(row?.expense),
+    carryover: num(row?.carryover),
+  };
 }
 
 export async function fetchTransactionsBetween(start: Date, end: Date): Promise<TransactionRow[]> {

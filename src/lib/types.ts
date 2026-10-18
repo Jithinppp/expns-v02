@@ -59,6 +59,8 @@ export interface BudgetStatus {
 export interface MonthSummary {
   income: number;
   expense: number;
+  /** Everything earned/spent before this month plus opening balances — the "main" balance. */
+  carryover: number;
 }
 
 export interface CategorySpend {
