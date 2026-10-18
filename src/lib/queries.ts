@@ -277,6 +277,14 @@ export async function updateBaseCurrency(profileId: string, currency: string): P
   if (error) throw error;
 }
 
+export async function updateFullName(profileId: string, fullName: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName })
+    .eq('id', profileId);
+  if (error) throw error;
+}
+
 export async function markAllNotificationsRead(): Promise<void> {
   const { error } = await supabase
     .from('notifications')

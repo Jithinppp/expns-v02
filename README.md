@@ -60,7 +60,7 @@ npx expo start
 | Budgets tab: per-category limits, weekly/monthly/yearly, alert threshold, live spent, long-press delete | ✅ |
 | Recurring rules: created in Profile, auto-posted by `pg_cron` (daily 01:00 UTC), anchored to `start_on` to avoid month-end drift | ✅ (needs pg_cron enabled) |
 | Alert inbox (bell) + `notifications` table with realtime | ✅ |
-| Profile: currency (relabel-only, no conversion), accounts, recurring rules, sign out | ✅ |
+| Profile: edit name, currency (relabel-only, no conversion), accounts, recurring rules, sign out | ✅ |
 | Push delivery (expo-notifications + Edge Function → Expo push) | later — `device_tokens` table is ready |
 | Transfers UI — schema supports `account → to_account_id` one-row transfers | later |
 | Edit transaction | later |

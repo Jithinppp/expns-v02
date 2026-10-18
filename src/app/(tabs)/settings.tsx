@@ -1,18 +1,18 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Field } from '@/components/ui/Field';
 import { Sheet } from '@/components/ui/Sheet';
-import { palette } from '@/constants/theme';
+import { fonts, palette } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/errors';
 import {
@@ -33,6 +33,7 @@ import {
   fetchCategories,
   fetchRecurringRules,
   updateBaseCurrency,
+  updateFullName,
 } from '@/lib/queries';
 import type { AccountKind, Category, Frequency, RecurringRule } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
@@ -91,6 +92,12 @@ export default function SettingsScreen() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // inline name editing
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
   // currency sheet
   const [currencyOpen, setCurrencyOpen] = useState(false);
 
@@ -108,6 +115,41 @@ export default function SettingsScreen() {
   const [recFrequency, setRecFrequency] = useState<Frequency>('monthly');
   const [recAccountId, setRecAccountId] = useState<string | null>(null);
   const [recNote, setRecNote] = useState('');
+
+  const startEditName = () => {
+    setNameDraft(profile?.full_name ?? '');
+    setNameError(null);
+    setEditingName(true);
+  };
+
+  const cancelEditName = () => {
+    setNameError(null);
+    setEditingName(false);
+  };
+
+  const saveName = async () => {
+    if (!profile) return;
+    const name = nameDraft.trim();
+    if (!name) {
+      setNameError('Enter your name.');
+      return;
+    }
+    if (name === (profile.full_name ?? '').trim()) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    setNameError(null);
+    try {
+      await updateFullName(profile.id, name);
+      await refreshProfile();
+      setEditingName(false);
+    } catch (cause) {
+      setNameError(errorMessage(cause, 'Could not save your name'));
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const pickCurrency = async (code: string) => {
     if (!profile) return;
@@ -231,13 +273,65 @@ export default function SettingsScreen() {
       <AppText variant="title">Profile</AppText>
 
       <Card variant="surface" style={styles.profileCard}>
-        <Avatar name={profile?.full_name} size={56} />
+        <Avatar name={editingName ? nameDraft : profile?.full_name} size={56} />
         <View style={styles.profileText}>
-          <AppText variant="heading">{profile?.full_name ?? 'Your profile'}</AppText>
+          {editingName ? (
+            <TextInput
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              placeholder="Your name"
+              placeholderTextColor={palette.textDim}
+              autoCapitalize="words"
+              autoCorrect={false}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => void saveName()}
+              selectionColor={palette.lime}
+              accessibilityLabel="Name"
+              style={styles.nameInput}
+            />
+          ) : (
+            <AppText variant="heading">{profile?.full_name ?? 'Your profile'}</AppText>
+          )}
           <AppText variant="caption" color={palette.textMuted}>
             {session?.user.email ?? ''}
           </AppText>
+          {nameError ? (
+            <AppText variant="caption" color={palette.red}>
+              {nameError}
+            </AppText>
+          ) : null}
         </View>
+        {editingName ? (
+          <View style={styles.nameActions}>
+            <IconButton
+              icon="x"
+              label="Cancel"
+              variant="dark"
+              size={40}
+              iconSize={16}
+              disabled={savingName}
+              onPress={cancelEditName}
+            />
+            <IconButton
+              icon="check"
+              label="Save name"
+              variant="lime"
+              size={40}
+              iconSize={16}
+              disabled={savingName}
+              onPress={() => void saveName()}
+            />
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit name"
+            hitSlop={12}
+            onPress={startEditName}>
+            <Feather name="edit-3" size={16} color={palette.textDim} />
+          </Pressable>
+        )}
       </Card>
 
       <View style={styles.section}>
@@ -536,6 +630,18 @@ const styles = StyleSheet.create({
   hintCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   hintText: { flex: 1, gap: 2 },
   field: { gap: 8 },
+  nameInput: {
+    fontFamily: fonts.semibold,
+    fontSize: 19,
+    lineHeight: 25,
+    letterSpacing: -0.2,
+    color: palette.white,
+    padding: 0,
+    margin: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.lime,
+  },
+  nameActions: { flexDirection: 'row', gap: 8 },
   chipRow: { flexDirection: 'row', gap: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   version: { textAlign: 'center', marginTop: 4 },
