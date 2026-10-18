@@ -1,56 +1,94 @@
-# Welcome to your Expo app 👋
+# Expns — expense tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native (Expo SDK 58) + Supabase. Dark, lime-accented design system; offline-friendly client-generated UUIDs; budgets with automatic "you're close / you've exceeded" alerts.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- **Expo SDK 58** / React Native 0.88 / **Expo Router** (file-based routes in `src/app`)
+- **Supabase** — Postgres + Auth + Row Level Security
+- Space Grotesk via `@expo-google-fonts/space-grotesk`
+- `react-native-svg` for the striped progress bars and donut chart
+- Session storage via `expo-sqlite`'s localStorage (no AsyncStorage needed)
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 1. Install
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+## 2. Supabase setup (one-time)
 
-### Other setup steps
+1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
+2. Open **SQL Editor** and run the migrations **in order** (copy-paste each file's contents):
+   - `supabase/migrations/20261018000001_core.sql` — profiles, accounts, categories, signup seeding, RLS
+   - `supabase/migrations/20261018000002_ledger.sql` — recurring rules + transactions
+   - `supabase/migrations/20261018000003_budgets_alerts.sql` — budgets, periods, alert triggers, notifications
+   - `supabase/migrations/20261018000004_views_automation.sql` — views, RPCs, recurring cron, realtime
+3. **Auth → Providers → Email**: for faster testing turn **off** "Confirm email". If you leave it on, the app shows a "check your inbox" screen after signup — both paths work.
+4. **Optional, for automatic recurring posts**: Database → **Extensions** → enable `pg_cron`, then re-run just the scheduling block at the end of `0004_views_automation.sql` (or run `select cron.schedule('expns-post-recurring', '0 1 * * *', 'select public.post_due_recurring()');`).
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## 3. Environment
 
-## Learn more
+Copy `.env.example` to `.env.local` and fill in:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # or the legacy anon key
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Both come from **Project Settings → API**. Only the publishable/anon key belongs in a mobile app — `service_role` bypasses RLS and must never ship.
 
-## Join the community
+## 4. Run
 
-Join our community of developers creating universal apps.
+```bash
+npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Press `a` / `i` for an emulator, or scan the QR with **Expo Go**.
+- `expo-sqlite` and `react-native-svg` are bundled in Expo Go, so no development build is needed yet.
+- If you get a "Supabase not connected" card, `.env.local` is missing values — fill it and restart the dev server.
+
+## What's built
+
+| Area | Status |
+| --- | --- |
+| Onboarding (3 slides, composed design visuals) → sign up / log in → dashboard | ✅ |
+| Dashboard: month switcher, white balance card, income/expense bars, quick-add tiles, budgets with striped progress, spending donut, recent history | ✅ |
+| Add expense / income: custom keypad, category & account chips, 14-day date picker, note | ✅ |
+| Transactions tab: month summary, search, day-grouped list, pull-to-refresh, long-press soft delete | ✅ |
+| Budgets tab: per-category limits, weekly/monthly/yearly, alert threshold, live spent, long-press delete | ✅ |
+| Recurring rules: created in Profile, auto-posted by `pg_cron` (daily 01:00 UTC), anchored to `start_on` to avoid month-end drift | ✅ (needs pg_cron enabled) |
+| Alert inbox (bell) + `notifications` table with realtime | ✅ |
+| Profile: currency (relabel-only, no conversion), accounts, recurring rules, sign out | ✅ |
+| Push delivery (expo-notifications + Edge Function → Expo push) | later — `device_tokens` table is ready |
+| Transfers UI — schema supports `account → to_account_id` one-row transfers | later |
+| Edit transaction | later |
+
+## How budget alerts work
+
+Every transaction insert/update/soft-delete fires `on_transaction_change`, which adjusts `budget_periods.spent` for the matching category budget **and** the "all expenses" budget. When spending crosses the threshold (default 80%) or the limit, exactly **one** notification per period is written — flags reset if spending drops back below (e.g. after deleting a transaction), so alerts can fire again legitimately. The dashboard reads `budget_status` (a security-invoker view) for live progress.
+
+## Project structure
+
+```
+src/
+  app/                 # routes (Expo Router)
+    onboarding.tsx     # 3-slide onboarding
+    (auth)/            # login, signup
+    (tabs)/            # dashboard, transactions, budgets, settings
+    transaction/new.tsx# add transaction modal (custom keypad)
+    notifications.tsx  # alert inbox
+  components/          # design system (ui/) + app components
+  constants/theme.ts   # palette, spacing, type scale
+  lib/                 # supabase client, auth context, queries, formatting
+supabase/migrations/   # run these in the SQL editor
+```
+
+## Useful commands
+
+```bash
+npx tsc --noEmit     # typecheck
+npx expo lint        # lint
+npx expo-doctor      # dependency/diagnosis
+```
+# expns-v02
