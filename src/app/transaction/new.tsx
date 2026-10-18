@@ -1,4 +1,4 @@
-import { format, getDaysInMonth } from 'date-fns';
+import { format, getDaysInMonth, parseISO } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -25,9 +25,17 @@ import { errorMessage } from '@/lib/errors';
 import { currencySymbol, dayLabel, isSameMonth, toISODate } from '@/lib/format';
 import { createCategory, createTransaction, fetchAccounts, fetchCategories } from '@/lib/queries';
 import type { Account, Category } from '@/lib/types';
+import { getViewedMonth } from '@/lib/view-month';
 
 /** Sentinel chip id that opens the "new category" sheet. */
 const NEW_TYPE_ID = '__new__';
+
+/** Parses a `YYYY-MM-DD` route param into a valid Date, or null. */
+function monthFromParam(value: string | undefined): Date | null {
+  if (!value) return null;
+  const parsed = parseISO(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 /** Curated emoji palette for user-created expense/income types. */
 const EMOJI_CHOICES = [
@@ -39,7 +47,7 @@ const EMOJI_CHOICES = [
 ];
 
 export default function NewTransactionScreen() {
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{ type?: string; month?: string }>();
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
   const currency = profile?.base_currency ?? 'USD';
@@ -49,8 +57,14 @@ export default function NewTransactionScreen() {
   );
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
-  const [month, setMonth] = useState(() => new Date());
-  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  const [month, setMonth] = useState<Date>(
+    () => monthFromParam(params.month) ?? monthFromParam(getViewedMonth() ?? '') ?? new Date(),
+  );
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const initial = monthFromParam(params.month) ?? monthFromParam(getViewedMonth() ?? '');
+    if (!initial) return new Date().getDate();
+    return isSameMonth(initial, new Date()) ? new Date().getDate() : 1;
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);

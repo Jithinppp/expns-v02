@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BudgetCard } from '@/components/BudgetCard';
@@ -19,7 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { chartPalette, palette, radius } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { addMonthsToDate, firstName, formatMoney, monthLabel } from '@/lib/format';
+import { addMonthsToDate, firstName, formatMoney, monthLabel, toISODate } from '@/lib/format';
 import {
   fetchBudgetStatus,
   fetchExpenseByCategory,
@@ -34,6 +34,7 @@ import type {
   TransactionRow as TransactionRowType,
 } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
+import { setViewedMonth } from '@/lib/view-month';
 
 interface DashboardData {
   summary: MonthSummary;
@@ -64,6 +65,10 @@ export default function DashboardScreen() {
   }, monthId);
 
   const { data, loading, error, refreshing, reload, refresh } = state;
+
+  useEffect(() => {
+    setViewedMonth(month);
+  }, [month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -205,14 +210,24 @@ export default function DashboardScreen() {
           icon="arrow-up-right"
           title="Expense"
           subtitle="Log spending"
-          onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'expense' } })}
+          onPress={() =>
+            router.push({
+              pathname: '/transaction/new',
+              params: { type: 'expense', month: toISODate(month) },
+            })
+          }
         />
         <QuickTile
           variant="green"
           icon="arrow-down-left"
           title="Income"
           subtitle="Log earnings"
-          onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'income' } })}
+          onPress={() =>
+            router.push({
+              pathname: '/transaction/new',
+              params: { type: 'income', month: toISODate(month) },
+            })
+          }
         />
       </View>
 
@@ -300,7 +315,9 @@ export default function DashboardScreen() {
             title="No transactions yet"
             message="Log your first expense and it shows up here instantly."
             actionLabel="Add transaction"
-            onAction={() => router.push('/transaction/new')}
+            onAction={() =>
+              router.push({ pathname: '/transaction/new', params: { month: toISODate(month) } })
+            }
           />
         ) : (
           data.recent.map((tx) => (

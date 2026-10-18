@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { endOfMonth } from 'date-fns';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -20,10 +20,11 @@ import { AppText } from '@/components/ui/AppText';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { fonts, palette, radius, TAB_BAR_INSET } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
-import { dayLabel, formatMoney, monthStart } from '@/lib/format';
+import { dayLabel, formatMoney, monthStart, toISODate } from '@/lib/format';
 import { fetchTransactionsBetween } from '@/lib/queries';
 import type { TransactionRow as TransactionRowType } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
+import { setViewedMonth } from '@/lib/view-month';
 
 export default function TransactionsScreen() {
   const insets = useSafeAreaInsets();
@@ -40,6 +41,10 @@ export default function TransactionsScreen() {
   );
 
   const { data, loading, error, refreshing, reload, refresh } = state;
+
+  useEffect(() => {
+    setViewedMonth(month);
+  }, [month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -163,7 +168,11 @@ export default function TransactionsScreen() {
                   ? () => void reload()
                   : query
                     ? () => setQuery('')
-                    : () => router.push('/transaction/new')
+                    : () =>
+                        router.push({
+                          pathname: '/transaction/new',
+                          params: { month: toISODate(month) },
+                        })
               }
             />
           )

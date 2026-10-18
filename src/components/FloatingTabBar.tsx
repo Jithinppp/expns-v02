@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, shadows } from '@/constants/theme';
+import { getViewedMonth } from '@/lib/view-month';
 
 const ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   index: 'home',
@@ -64,7 +65,12 @@ export function FloatingTabBar({ state, navigateToTab }: BottomTabBarProps) {
           accessibilityLabel="Add transaction"
           onPress={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push('/transaction/new');
+            const viewed = getViewedMonth();
+            router.push(
+              viewed
+                ? { pathname: '/transaction/new', params: { month: viewed } }
+                : '/transaction/new',
+            );
           }}
           style={({ pressed }) => [styles.iconWrap, styles.plus, pressed && styles.pressed]}>
           <Feather name="plus" size={22} color={palette.ink} />
