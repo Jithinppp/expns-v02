@@ -57,6 +57,7 @@ function RootNavigator() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen name="auth/confirm" options={{ animation: 'fade' }} />
+        <Stack.Screen name="auth/reset" options={{ animation: 'fade' }} />
         <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </>

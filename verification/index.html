@@ -225,6 +225,7 @@
         var code = params.get('code');
         var errorCode = params.get('error_code') || params.get('error');
         var errorDescription = params.get('error_description');
+        var isReset = params.get('type') === 'recovery';
         var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         function render(className, icon, heading, copy, options) {
@@ -251,9 +252,27 @@
             'err',
             expired ? 'Link expired' : 'Something went wrong',
             expired
-              ? 'This confirmation link has expired or was already used. Open the app and sign up again to get a fresh one.'
-              : errorDescription || "That link didn't work. Open the app and sign up again.",
+              ? isReset
+                ? 'This reset link has expired or was already used. Request a new one from the app.'
+                : 'This confirmation link has expired or was already used. Open the app and sign up again to get a fresh one.'
+              : errorDescription ||
+                (isReset
+                  ? "That link didn't work. Request a new reset link from the app."
+                  : "That link didn't work. Open the app and sign up again."),
             {}
+          );
+        } else if (code && isReset) {
+          render(
+            'ok',
+            'ok',
+            'Reset your password',
+            'Open the Expns app to choose a new password.',
+            isMobile
+              ? {
+                  link: 'expns://auth/reset?code=' + encodeURIComponent(code),
+                  hint: 'Opens the app so you can set a new password.',
+                }
+              : { hint: 'Open the Expns app on your phone to set a new password.' }
           );
         } else if (code) {
           render(

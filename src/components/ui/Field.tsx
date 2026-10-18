@@ -26,6 +26,7 @@ interface FieldProps {
   error?: string | null;
   multiline?: boolean;
   returnKeyType?: 'done' | 'next' | 'go';
+  autoFocus?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -41,6 +42,7 @@ export function Field({
   error,
   multiline = false,
   returnKeyType,
+  autoFocus = false,
   style,
 }: FieldProps) {
   const [focused, setFocused] = useState(false);
@@ -77,6 +79,7 @@ export function Field({
           autoCorrect={false}
           multiline={multiline}
           returnKeyType={returnKeyType}
+          autoFocus={autoFocus}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           selectionColor={palette.lime}
