@@ -12,6 +12,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.jithinppp.expns",
       "adaptiveIcon": {
         "backgroundColor": "#201F1F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

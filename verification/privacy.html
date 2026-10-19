@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#201F1F" />
+    <title>Privacy policy · Expns</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23CEF62E'/%3E%3Cpath d='M20 33.5l8.5 8.5L45 22' fill='none' stroke='%23171717' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #201f1f;
+        --surface: #2a2929;
+        --lime: #cef62e;
+        --text: #ffffff;
+        --muted: rgba(255, 255, 255, 0.62);
+        --dim: rgba(255, 255, 255, 0.4);
+        --border: rgba(255, 255, 255, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        padding: 40px 20px 64px;
+        background-color: var(--bg);
+        background-image: radial-gradient(
+          120% 90% at 50% -10%,
+          rgba(206, 246, 46, 0.07),
+          transparent 60%
+        );
+        color: var(--text);
+        font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      .shell {
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .wordmark {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .wordmark em {
+        font-style: normal;
+        color: var(--lime);
+      }
+
+      header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+
+      .updated {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 24px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      p,
+      li {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      ul {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      a {
+        color: var(--lime);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .foot {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="wordmark">Expns<em>.</em></div>
+
+      <header>
+        <h1>Privacy policy</h1>
+        <p class="updated">Last updated · October 19, 2026</p>
+      </header>
+
+      <section>
+        <h2>The short version</h2>
+        <p>
+          Expns is a personal expense tracker. Your data is yours: nothing is sold, there are no
+          ads, and there is no third-party tracking. This page explains exactly what the app
+          stores and how to erase it.
+        </p>
+      </section>
+
+      <section>
+        <h2>What the app collects</h2>
+        <ul>
+          <li><strong>Account details</strong> — the name and email address you sign up with.</li>
+          <li>
+            <strong>The records you create</strong> — accounts, transactions (amounts, dates,
+            notes, merchant names), budgets, categories and recurring rules.
+          </li>
+          <li>
+            <strong>Alert history</strong> — the budget notifications the app generates for you.
+          </li>
+        </ul>
+        <p>
+          Your password is never stored by the app itself — Supabase authentication keeps it
+          hashed. Expns does not request your location, contacts, camera, microphone or
+          advertising ID.
+        </p>
+      </section>
+
+      <section>
+        <h2>How it is used</h2>
+        <p>
+          Only to run the app for you: showing your dashboard, syncing your data between your
+          devices, and sending the email links you request (sign-up confirmation and password
+          reset). No profiling, no advertising, no machine learning on your records.
+        </p>
+      </section>
+
+      <section>
+        <h2>Where it is stored</h2>
+        <p>
+          In your database on <a href="https://supabase.com">Supabase</a>, protected by
+          row-level security — every record is scoped to your signed-in account. All traffic
+          between the app and the service is encrypted in transit (HTTPS/TLS).
+        </p>
+      </section>
+
+      <section>
+        <h2>Who can see it</h2>
+        <p>
+          No one else. The app shares no data with third parties. Supabase (database and
+          authentication) and Vercel (this website) process data only to operate the service.
+        </p>
+      </section>
+
+      <section>
+        <h2>Retention &amp; deletion</h2>
+        <p>
+          Your data stays until you delete your account — <strong>Profile → Delete account</strong>
+          in the app wipes everything immediately. You can also request deletion by email; both
+          options are on the <a href="/delete-account.html">Delete your account</a> page. Provider
+          backups age out on Supabase's regular backup schedule.
+        </p>
+      </section>
+
+      <section>
+        <h2>Children</h2>
+        <p>Expns is not directed at children under 13 and does not knowingly store their data.</p>
+      </section>
+
+      <section>
+        <h2>This website</h2>
+        <p>
+          Pages on this domain load the Space Grotesk webfont from Google Fonts, and the
+          email-link page loads the Supabase client script from jsDelivr. No cookies, no
+          analytics and no tracking pixels are used.
+        </p>
+      </section>
+
+      <section>
+        <h2>Changes</h2>
+        <p>If this policy changes, the date at the top of this page changes with it.</p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Questions about any of this? Write to
+          <a href="mailto:jithinp.dev@gmail.com">jithinp.dev@gmail.com</a>.
+        </p>
+      </section>
+
+      <div class="foot">Expns · track smarter</div>
+    </main>
+  </body>
+</html>

@@ -28,6 +28,7 @@ import {
 import {
   createAccount,
   createRecurringRule,
+  deleteOwnAccount,
   deleteRecurringRule,
   fetchAccountBalances,
   fetchCategories,
@@ -35,6 +36,7 @@ import {
   updateBaseCurrency,
   updateFullName,
 } from '@/lib/queries';
+import { supabase } from '@/lib/supabase';
 import type { AccountKind, Category, Frequency, RecurringRule } from '@/lib/types';
 import { useLoad } from '@/lib/use-load';
 
@@ -266,6 +268,31 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently erases your profile and everything in it — accounts, transactions, budgets, categories and recurring rules. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete forever',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await deleteOwnAccount();
+                await supabase.auth.signOut({ scope: 'local' });
+                router.replace('/(auth)/login');
+              } catch (cause) {
+                Alert.alert('Could not delete account', errorMessage(cause, 'Try again.'));
+              }
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   const recCategoryOptions = categories.filter((category) => category.kind === recType);
 
   return (
@@ -402,6 +429,16 @@ export default function SettingsScreen() {
       </View>
 
       <Button label="Sign out" variant="danger" onPress={confirmSignOut} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Delete account"
+        hitSlop={10}
+        onPress={confirmDeleteAccount}
+        style={styles.deleteAccount}>
+        <AppText variant="caption" color={palette.red}>
+          Delete account
+        </AppText>
+      </Pressable>
       <AppText variant="caption" color={palette.textDim} style={styles.version}>
         Expns 1.0.0
       </AppText>
@@ -644,5 +681,6 @@ const styles = StyleSheet.create({
   nameActions: { flexDirection: 'row', gap: 8 },
   chipRow: { flexDirection: 'row', gap: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  deleteAccount: { alignSelf: 'center', paddingVertical: 2 },
   version: { textAlign: 'center', marginTop: 4 },
 });

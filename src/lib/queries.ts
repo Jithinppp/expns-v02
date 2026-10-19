@@ -289,6 +289,12 @@ export async function updateFullName(profileId: string, fullName: string): Promi
   if (error) throw error;
 }
 
+/** Deletes the signed-in auth user; every table cascades from auth.users. */
+export async function deleteOwnAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_own_account');
+  if (error) throw error;
+}
+
 export async function markAllNotificationsRead(): Promise<void> {
   const { error } = await supabase
     .from('notifications')
